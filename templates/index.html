@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linux Server Health Monitor</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 20px;
+        background: #101827;
+        color: #e5e7eb;
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        max-width: 900px;
+        margin: auto;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      .muted {
+        color: #9ca3af;
+      }
+      .status,
+      .card {
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .status {
+        margin: 24px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+      .value {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 12px;
+      }
+      .label {
+        color: #9ca3af;
+        font-size: 14px;
+      }
+      #error {
+        color: #fca5a5;
+      }
+      .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        background: #9ca3af;
+      }
+      .good {
+        background: #34d399;
+      }
+      .bad {
+        background: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Linux Server Health</h1>
+      <p class="muted">Live system metrics from your Linux environment</p>
+
+      <section class="status">
+        <span id="dot" class="dot"></span>
+        <strong id="health">Connecting...</strong>
+        <p class="muted" id="updated">Waiting for first check</p>
+        <p id="error"></p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="label">Hostname</div>
+          <div class="value" id="hostname">—</div>
+        </article>
+        <article class="card">
+          <div class="label">Memory usage</div>
+          <div class="value" id="memory">—</div>
+        </article>
+        <article class="card">
+          <div class="label">Root disk usage</div>
+          <div class="value" id="disk">—</div>
+        </article>
+        <article class="card">
+          <div class="label">System load (1 min)</div>
+          <div class="value" id="load">—</div>
+        </article>
+        <article class="card">
+          <div class="label">System uptime</div>
+          <div class="value" id="uptime">—</div>
+        </article>
+        <article class="card">
+          <div class="label">NGINX service</div>
+          <div class="value" id="nginx">—</div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      function formatUptime(seconds) {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${days}d ${hours}h ${minutes}m`;
+      }
+
+      async function refreshMetrics() {
+        try {
+          const response = await fetch("/api/metrics");
+          if (!response.ok) throw new Error("API returned an error");
+
+          const data = await response.json();
+
+          document.getElementById("hostname").textContent = data.hostname;
+          document.getElementById("memory").textContent =
+            `${data.memory_usage_percent}%`;
+          document.getElementById("disk").textContent =
+            `${data.disk_usage_percent}%`;
+          document.getElementById("load").textContent = data.load_average;
+          document.getElementById("uptime").textContent = formatUptime(
+            data.uptime_seconds,
+          );
+          document.getElementById("nginx").textContent =
+            data.nginx_status.toUpperCase();
+
+          const healthy =
+            data.nginx_status === "running" &&
+            Number(data.disk_usage_percent) < 80;
+
+          document.getElementById("dot").className =
+            `dot ${healthy ? "good" : "bad"}`;
+          document.getElementById("health").textContent = healthy
+            ? "System checks passed"
+            : "Attention required";
+          document.getElementById("updated").textContent =
+            `Last checked: ${new Date().toLocaleTimeString()}`;
+          document.getElementById("error").textContent = "";
+        } catch (error) {
+          document.getElementById("dot").className = "dot bad";
+          document.getElementById("health").textContent =
+            "Unable to retrieve metrics";
+          document.getElementById("error").textContent =
+            "Check whether the Flask API is running.";
+        }
+      }
+
+      refreshMetrics();
+      setInterval(refreshMetrics, 10000);
+    </script>
+  </body>
+</html>
