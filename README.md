@@ -2,6 +2,10 @@
 
 A lightweight Linux monitoring tool built with Bash and Python Flask. It collects system metrics, checks NGINX service status, and displays the results in a browser dashboard.
 
+## Dashboard Preview
+
+![Server Health Monitor Dashboard](screenshots/dashboard.png)
+
 ## Features
 
 - CPU load average and system uptime
