@@ -22,6 +22,27 @@ A lightweight Linux monitoring tool built with Bash and Python Flask. It collect
 - systemd and journalctl
 - cron
 
+## Architecture
+
+```mermaid
+flowchart TD
+    U[User's Browser] -->|HTTPS| DNS[monitor.uvaishassan.com]
+    DNS --> N[NGINX Reverse Proxy]
+    N -->|Proxy to localhost:8000| G[Gunicorn]
+    G --> F[Flask Application]
+    F -->|Runs metrics.sh| B[Bash Monitoring Script]
+    B -->|Reads system metrics| OS[Linux System]
+    B -->|Returns JSON data| F
+    F --> G
+    G --> N
+    N --> U
+
+    C[Certbot / Let's Encrypt] -. TLS Certificate .-> N
+    S[systemd] -. Manages .-> G
+    CRON[Cron] -. Runs periodically .-> MON[monitor.sh]
+    MON --> LOG[logs/monitor.log]
+```
+
 ## Project Structure
 
 - `monitor.sh` — human-readable health report
